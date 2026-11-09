@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { brand } from '../config/brand';
-import { isFirebaseConfigured } from '../config/firebase';
 import { getSiteConfig, listSubmissions, saveSiteConfig, uploadAvatar, type SiteConfig, type Submission } from '../services/site';
 
 export function Admin() {
@@ -14,7 +13,6 @@ export function Admin() {
   const [msg, setMsg] = useState('');
 
   async function refresh() {
-    if (!isFirebaseConfigured) return;
     try {
       const [s, c] = await Promise.all([listSubmissions(), getSiteConfig()]);
       setSubs(s);
@@ -84,7 +82,7 @@ export function Admin() {
         <h1 className="text-2xl font-bold text-gold">Admin Panel</h1>
         <button type="button" onClick={() => { sessionStorage.removeItem('pv-admin'); setAuthed(false); }} className="rounded-xl border border-border px-3 py-2 text-sm">Logout</button>
       </div>
-      {!isFirebaseConfigured && <p className="mt-4 rounded-xl border border-amber-900/50 bg-amber-950/30 p-3 text-sm text-amber-100">Firebase is not configured. Add VITE_FIREBASE_* env vars to enable submissions, avatar upload, and reel storage.</p>}
+      <p className="mt-4 rounded-xl border border-border bg-bg/40 p-3 text-sm text-muted">Data is stored in Turso via Vercel API routes. Set <code>TURSO_DATABASE_URL</code> and <code>TURSO_AUTH_TOKEN</code> in Vercel/local env.</p>
       {msg && <p className="mt-4 rounded-xl border border-green-900/50 bg-green-950/30 p-3 text-sm text-green-100">{msg}</p>}
       {err && <p className="mt-4 rounded-xl border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-100">{err}</p>}
 
@@ -93,28 +91,28 @@ export function Admin() {
           <h2 className="font-semibold text-slate-100">Poochandi Avatar & Reel Links</h2>
           <label className="mt-4 block text-sm text-muted">Avatar URL</label>
           <input value={site.avatarUrl} onChange={(e) => setSite((s) => ({ ...s, avatarUrl: e.target.value }))} className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2" />
-          <label className="mt-3 block text-sm text-muted">Upload Avatar (Firebase Storage)</label>
-          <input type="file" accept="image/*" onChange={onAvatar} disabled={!isFirebaseConfigured || busy} className="mt-1 block w-full text-sm text-muted" />
+          <label className="mt-3 block text-sm text-muted">Upload Avatar (paste URL above if file upload is unavailable)</label>
+          <input type="file" accept="image/*" onChange={onAvatar} disabled={busy} className="mt-1 block w-full text-sm text-muted" />
           <div className="mt-4 space-y-2">
             <div className="text-sm text-muted">4 Featured Instagram Reel URLs</div>
             {[0, 1, 2, 3].map((i) => (
               <input key={i} value={site.reels[i] || ''} onChange={(e) => setSite((s) => ({ ...s, reels: s.reels.map((r, j) => (j === i ? e.target.value : r)) }))} placeholder={`Reel ${i + 1} URL`} className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm" />
             ))}
           </div>
-          <button disabled={!isFirebaseConfigured || busy} className="mt-4 rounded-xl bg-gold px-4 py-2 font-semibold text-black disabled:opacity-50">Save Settings</button>
+          <button disabled={busy} className="mt-4 rounded-xl bg-gold px-4 py-2 font-semibold text-black disabled:opacity-50">Save Settings</button>
         </form>
 
         <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between"><h2 className="font-semibold text-slate-100">Submitted Child Names & Ages</h2><button type="button" onClick={refresh} disabled={!isFirebaseConfigured} className="text-sm text-gold disabled:opacity-50">Refresh</button></div>
+          <div className="flex items-center justify-between"><h2 className="font-semibold text-slate-100">Submitted Child Names & Ages</h2><button type="button" onClick={refresh} className="text-sm text-gold">Refresh</button></div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-muted"><tr><th className="py-2 pr-3">Child Name</th><th className="py-2 pr-3">Age</th><th className="py-2">Time</th></tr></thead>
               <tbody>
                 {subs.length === 0 ? (
-                  <tr><td colSpan={3} className="py-4 text-muted">{isFirebaseConfigured ? 'No submissions yet.' : 'Configure Firebase to view submissions.'}</td></tr>
+                  <tr><td colSpan={3} className="py-4 text-muted">No submissions yet, or database not configured.</td></tr>
                 ) : subs.map((s) => {
-                  const ts = s.createdAt as { toDate?: () => Date } | undefined;
-                  const time = ts?.toDate ? ts.toDate().toLocaleString() : '—';
+                  const raw = s.createdAt as unknown;
+                  const time = typeof raw === 'string' ? raw : (raw && typeof (raw as { toDate?: () => Date }).toDate === 'function' ? (raw as { toDate: () => Date }).toDate().toLocaleString() : '—');
                   return <tr key={s.id} className="border-t border-border"><td className="py-2 pr-3">{s.childName}</td><td className="py-2 pr-3">{s.childAge}</td><td className="py-2 text-muted">{time}</td></tr>;
                 })}
               </tbody>

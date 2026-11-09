@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { brand } from '../config/brand';
 import { useLang } from '../context/LangContext';
 import { addSubmission, getSiteConfig } from '../services/site';
-import { isFirebaseConfigured } from '../config/firebase';
 
 export function Complaint() {
   const { t } = useLang();
@@ -23,10 +22,6 @@ export function Complaint() {
     setError('');
     if (!childName.trim() || !childAge.trim()) {
       setError(t('Please enter child name and age.', 'குழந்தையின் பெயர் மற்றும் வயதை உள்ளிடவும்.'));
-      return;
-    }
-    if (!isFirebaseConfigured) {
-      setError(t('Data storage (Firebase) is not configured yet. Please configure Firebase to save submissions.', 'Firebase அமைக்கப்படவில்லை. பெயர்களை சேமிக்க Firebase அமைக்கவும்.'));
       return;
     }
     setBusy(true);
